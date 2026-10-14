@@ -31,3 +31,6 @@ class Bm25OnlyRanker:
         scores = X[:, 0].astype(np.float32)
         logger.info("BM25OnlyRanker: using %d scores", len(scores))
         return scores
+
+
+BM25OnlyRanker = Bm25OnlyRanker

@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := all
 
-.PHONY: setup data build train evaluate analyze test lint all clean
+.PHONY: setup data build train evaluate analyze test lint all clean serve
 
 setup:
 	pip install -e ".[dev]"
@@ -33,3 +33,7 @@ all: setup data build train evaluate analyze
 clean:
 	rm -rf data/raw/* data/interim/* data/processed/*
 	@echo "Cleaned data directories."
+
+serve:
+	uvicorn mmrerank.app:app --host 127.0.0.1 --port 8000 --reload
+

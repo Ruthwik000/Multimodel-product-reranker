@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multimodal Product Reranker | LightGBM LambdaRank & CLIP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #080c14;
+      --bg-card: rgba(16, 24, 40, 0.75);
+      --bg-card-hover: rgba(23, 34, 56, 0.85);
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-focus: #8b5cf6;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #8b5cf6;
+      --primary-glow: rgba(139, 92, 246, 0.35);
+      --accent-cyan: #06b6d4;
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-rose: #f43f5e;
+      --font-display: 'Outfit', sans-serif;
+      --font-sans: 'Inter', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(139, 92, 246, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 85% 25%, rgba(6, 182, 212, 0.12) 0%, transparent 45%),
+        radial-gradient(circle at 50% 85%, rgba(16, 185, 129, 0.08) 0%, transparent 50%);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+
+    /* Container */
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 24px 20px 60px;
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 28px;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo-badge {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, var(--primary), var(--accent-cyan));
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 20px var(--primary-glow);
+      font-size: 22px;
+    }
+
+    .brand-title {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #ffffff 60%, #cbd5e1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .nav-tags {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .tag-badge {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-subtle);
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dot-live {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-emerald);
+      box-shadow: 0 0 8px var(--accent-emerald);
+    }
+
+    /* Hero / Search Section */
+    .search-panel {
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .search-bar-wrapper {
+      position: relative;
+      margin-bottom: 16px;
+    }
+
+    .search-input {
+      width: 100%;
+      background: rgba(8, 12, 20, 0.8);
+      border: 1px solid var(--border-subtle);
+      border-radius: 14px;
+      padding: 16px 20px 16px 50px;
+      color: #fff;
+      font-size: 1.1rem;
+      font-family: var(--font-sans);
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .search-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 18px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 18px;
+    }
+
+    .visual-indicator-badge {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(139, 92, 246, 0.15);
+      border: 1px solid rgba(139, 92, 246, 0.4);
+      color: #c4b5fd;
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Query Pills */
+    .query-pills-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+
+    .query-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .pill-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-subtle);
+      padding: 6px 14px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      color: #cbd5e1;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .pill-btn:hover {
+      background: rgba(139, 92, 246, 0.15);
+      border-color: rgba(139, 92, 246, 0.5);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    .pill-btn.active {
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(6, 182, 212, 0.3));
+      border-color: var(--primary);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    /* Controls Bar */
+    .controls-grid {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .model-selector-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .model-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-subtle);
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      color: #94a3b8;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .model-btn:hover {
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .model-btn.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+      font-weight: 600;
+      box-shadow: 0 0 16px var(--primary-glow);
+    }
+
+    .compare-toggle-btn {
+      background: rgba(6, 182, 212, 0.1);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      color: var(--accent-cyan);
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .compare-toggle-btn.active {
+      background: var(--accent-cyan);
+      border-color: var(--accent-cyan);
+      color: #080c14;
+      box-shadow: 0 0 16px rgba(6, 182, 212, 0.4);
+    }
+
+    .action-btn-group {
+      display: flex;
+      gap: 10px;
+    }
+
+    .primary-btn {
+      background: linear-gradient(135deg, var(--primary), #7c3aed);
+      color: #fff;
+      border: none;
+      padding: 10px 22px;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 18px var(--primary-glow);
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .primary-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px rgba(139, 92, 246, 0.5);
+    }
+
+    .secondary-btn {
+      background: rgba(255, 255, 255, 0.06);
+      color: #fff;
+      border: 1px solid var(--border-subtle);
+      padding: 10px 16px;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .secondary-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Metric Bar */
+    .metrics-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .metric-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 14px;
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      backdrop-filter: blur(12px);
+    }
+
+    .metric-card.highlight {
+      border-color: rgba(139, 92, 246, 0.4);
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(16, 24, 40, 0.8));
+    }
+
+    .metric-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .metric-value {
+      font-family: var(--font-display);
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .metric-sub {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* Product Cards */
+    .results-section {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 900px) {
+      .comparison-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .column-header {
+      background: rgba(255, 255, 255, 0.03);
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--border-subtle);
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .column-title {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .product-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 14px;
+      padding: 14px 18px;
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      backdrop-filter: blur(10px);
+      position: relative;
+    }
+
+    .product-card:hover {
+      background: var(--bg-card-hover);
+      border-color: rgba(255, 255, 255, 0.16);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    .rank-badge {
+      width: 36px;
+      height: 36px;
+      min-width: 36px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #cbd5e1;
+    }
+
+    .rank-badge.top-1 {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #fff;
+      border: none;
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+    }
+
+    .rank-badge.top-2 {
+      background: linear-gradient(135deg, #94a3b8, #64748b);
+      color: #fff;
+      border: none;
+    }
+
+    .rank-badge.top-3 {
+      background: linear-gradient(135deg, #b45309, #78350f);
+      color: #fff;
+      border: none;
+    }
+
+    .product-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .product-title-text {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #f1f5f9;
+      margin-bottom: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .product-meta-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .esci-chip {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+    }
+
+    .chip-exact {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .chip-substitute {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .chip-complement {
+      background: rgba(6, 182, 212, 0.15);
+      color: #38bdf8;
+      border: 1px solid rgba(6, 182, 212, 0.3);
+    }
+
+    .chip-irrelevant {
+      background: rgba(244, 63, 94, 0.15);
+      color: #fb7185;
+      border: 1px solid rgba(244, 63, 94, 0.3);
+    }
+
+    .feature-pill {
+      background: rgba(255, 255, 255, 0.04);
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      color: #cbd5e1;
+    }
+
+    .delta-badge {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 0.75rem;
+      padding: 4px 8px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .delta-up {
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+
+    .delta-down {
+      background: rgba(244, 63, 94, 0.2);
+      color: #fb7185;
+      border: 1px solid rgba(244, 63, 94, 0.4);
+    }
+
+    .delta-flat {
+      background: rgba(255, 255, 255, 0.05);
+      color: #94a3b8;
+    }
+
+    .score-badge {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--primary);
+      text-align: right;
+      min-width: 75px;
+    }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+
+    .modal-card {
+      background: #0f172a;
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      max-width: 500px;
+      width: 100%;
+      padding: 24px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+    }
+
+    .modal-title {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      margin-bottom: 16px;
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+
+    .form-input, .form-select {
+      width: 100%;
+      background: #1e293b;
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: #fff;
+      font-size: 0.9rem;
+      outline: none;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div class="brand-group">
+        <div class="logo-badge">⚡</div>
+        <div>
+          <h1 class="brand-title">MM-Rerank Studio</h1>
+          <p class="brand-subtitle">Multimodal Product Search Reranker • LightGBM LambdaRank & CLIP</p>
+        </div>
+      </div>
+      <div class="nav-tags">
+        <span class="tag-badge"><span class="dot-live"></span> Model Ready</span>
+        <span class="tag-badge">ESCI US Locale</span>
+        <span class="tag-badge">v0.1.0</span>
+      </div>
+    </header>
+
+    <!-- Search & Controls Panel -->
+    <section class="search-panel">
+      <div class="search-bar-wrapper">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="queryInput" class="search-input" value="silk bodysuit long sleevetops" placeholder="Type a search query (e.g. 'silk bodysuit long sleeve', 'pool cover', 'running shoes')...">
+        <div id="visualBadge" class="visual-indicator-badge">✨ Visual Query</div>
+      </div>
+
+      <div class="query-pills-label">Sample Queries from Held-Out ESCI Test Set:</div>
+      <div class="query-pills" id="samplePills">
+        <!-- Dynamically populated or fallback -->
+      </div>
+
+      <div class="controls-grid">
+        <div class="model-selector-group">
+          <button class="model-btn active" data-variant="text_plus_image">✨ Text + Image (Multimodal)</button>
+          <button class="model-btn" data-variant="text_only">📝 Text Only</button>
+          <button class="model-btn" data-variant="bm25_only">🔍 BM25 Only</button>
+          <button class="model-btn" data-variant="image_only">🖼️ Image Only</button>
+          <button class="model-btn" data-variant="random">🎲 Random</button>
+          <button class="compare-toggle-btn" id="compareToggleBtn">⚡ Side-by-Side Compare</button>
+        </div>
+
+        <div class="action-btn-group">
+          <button class="secondary-btn" id="openAddModalBtn">+ Add Product</button>
+          <button class="primary-btn" id="rerankBtn">⚡ Rerank Candidates</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Metrics Bar -->
+    <section class="metrics-bar">
+      <div class="metric-card highlight">
+        <span class="metric-label">NDCG@10 Score</span>
+        <span class="metric-value" id="metricNdcg">0.6842</span>
+        <span class="metric-sub" id="metricNdcgSub">Rank quality for top 10 items</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Candidate Products</span>
+        <span class="metric-value" id="metricCount">16</span>
+        <span class="metric-sub">Query candidate pool size</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Query Intent</span>
+        <span class="metric-value" id="metricIntent">Visual</span>
+        <span class="metric-sub" id="metricKeywords">Keywords: silk, bodysuit</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Inference Latency</span>
+        <span class="metric-value" id="metricLatency">4.2 ms</span>
+        <span class="metric-sub">Fast tabular LightGBM</span>
+      </div>
+    </section>
+
+    <!-- Results Display -->
+    <section id="resultsContainer">
+      <!-- Dynamically filled with single list or side-by-side comparison -->
+    </section>
+  </div>
+
+  <!-- Add Product Modal -->
+  <div class="modal-backdrop" id="addModal">
+    <div class="modal-card">
+      <h3 class="modal-title">Add Candidate Product</h3>
+      <div class="form-group">
+        <label class="form-label">Product Title</label>
+        <input type="text" id="newTitle" class="form-input" placeholder="e.g. Women's Elegant Silk Long Sleeve Bodysuit">
+      </div>
+      <div class="form-group">
+        <label class="form-label">True ESCI Label</label>
+        <select id="newLabel" class="form-select">
+          <option value="E">Exact (E) - Perfect Match (Gain 1.0)</option>
+          <option value="S">Substitute (S) - Viable Alternative (Gain 0.1)</option>
+          <option value="C">Complement (C) - Accessory/Add-on (Gain 0.01)</option>
+          <option value="I" selected>Irrelevant (I) - Poor Match (Gain 0.0)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Has Product Image?</label>
+        <select id="newHasImage" class="form-select">
+          <option value="1">Yes (Image available)</option>
+          <option value="0">No (Missing image / NaN)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">CLIP Image Cosine Similarity (0.0 to 1.0)</label>
+        <input type="number" step="0.05" min="0" max="1" id="newClipSim" class="form-input" value="0.75">
+      </div>
+      <div class="modal-actions">
+        <button class="secondary-btn" id="closeAddModalBtn">Cancel</button>
+        <button class="primary-btn" id="saveNewProductBtn">Add to Candidates</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // State
+    let currentQuery = "silk bodysuit long sleevetops";
+    let currentProducts = [];
+    let currentModel = "text_plus_image";
+    let isCompareMode = false;
+    let sampleQueriesData = [];
+
+    // Visual Lexicon for client-side highlighting
+    const VISUAL_WORDS = new Set([
+      "red", "blue", "green", "black", "white", "pink", "purple", "yellow", "orange",
+      "brown", "gold", "silver", "grey", "gray", "striped", "floral", "plaid", "polka",
+      "checkered", "printed", "leather", "cotton", "silk", "wool", "denim", "velvet",
+      "linen", "satin", "suede", "lace", "mesh", "knit", "vintage", "modern", "retro",
+      "minimalist", "boho", "elegant", "suit", "dress", "cover", "sweatshirt", "shoes"
+    ]);
+
+    // DOM Elements
+    const queryInput = document.getElementById('queryInput');
+    const visualBadge = document.getElementById('visualBadge');
+    const samplePillsContainer = document.getElementById('samplePills');
+    const resultsContainer = document.getElementById('resultsContainer');
+    const compareToggleBtn = document.getElementById('compareToggleBtn');
+    const rerankBtn = document.getElementById('rerankBtn');
+    const metricNdcg = document.getElementById('metricNdcg');
+    const metricNdcgSub = document.getElementById('metricNdcgSub');
+    const metricCount = document.getElementById('metricCount');
+    const metricIntent = document.getElementById('metricIntent');
+    const metricKeywords = document.getElementById('metricKeywords');
+    const metricLatency = document.getElementById('metricLatency');
+
+    // Modal elements
+    const addModal = document.getElementById('addModal');
+    const openAddModalBtn = document.getElementById('openAddModalBtn');
+    const closeAddModalBtn = document.getElementById('closeAddModalBtn');
+    const saveNewProductBtn = document.getElementById('saveNewProductBtn');
+
+    // Init
+    window.addEventListener('DOMContentLoaded', async () => {
+      await loadSampleQueries();
+      checkVisualIntent(queryInput.value);
+      runRerank();
+    });
+
+    // Load sample queries from backend
+    async function loadSampleQueries() {
+      try {
+        const res = await fetch('/api/sample_queries');
+        sampleQueriesData = await res.json();
+        renderSamplePills();
+        if (sampleQueriesData.length > 0) {
+          const first = sampleQueriesData.find(s => s.query.includes('silk')) || sampleQueriesData[0];
+          setQueryFromSample(first);
+        }
+      } catch (err) {
+        console.error("Failed to load sample queries:", err);
+      }
+    }
+
+    function renderSamplePills() {
+      samplePillsContainer.innerHTML = '';
+      sampleQueriesData.forEach((item, idx) => {
+        const btn = document.createElement('button');
+        btn.className = `pill-btn ${idx === 1 ? 'active' : ''}`;
+        const icon = item.query.includes('pool') ? '🏊' :
+                     item.query.includes('silk') ? '👗' :
+                     item.query.includes('baby') ? '👶' :
+                     item.query.includes('slipper') ? '🥿' :
+                     item.query.includes('fitbit') ? '⌚' :
+                     item.query.includes('vans') ? '🛹' : '🏺';
+        btn.innerHTML = `${icon} ${item.query} <span style="opacity:0.6;font-size:0.75rem;">(${item.products.length})</span>`;
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          setQueryFromSample(item);
+          runRerank();
+        });
+        samplePillsContainer.appendChild(btn);
+      });
+    }
+
+    function setQueryFromSample(sample) {
+      currentQuery = sample.query;
+      queryInput.value = sample.query;
+      currentProducts = JSON.parse(JSON.stringify(sample.products));
+      checkVisualIntent(currentQuery);
+    }
+
+    // Visual Intent Detection
+    function checkVisualIntent(query) {
+      const tokens = query.toLowerCase().split(/\s+/);
+      const matched = tokens.filter(t => VISUAL_WORDS.has(t));
+      if (matched.length > 0) {
+        visualBadge.innerHTML = `✨ Visual Query (${matched.join(', ')})`;
+        visualBadge.style.display = 'flex';
+        metricIntent.textContent = "Visual";
+        metricKeywords.textContent = `Terms: ${matched.join(', ')}`;
+      } else {
+        visualBadge.innerHTML = `📝 Lexical / Spec Query`;
+        visualBadge.style.display = 'flex';
+        metricIntent.textContent = "Non-Visual";
+        metricKeywords.textContent = "No visual lexicon words";
+      }
+    }
+
+    queryInput.addEventListener('input', () => {
+      currentQuery = queryInput.value.trim();
+      checkVisualIntent(currentQuery);
+    });
+
+    // Model variant buttons
+    document.querySelectorAll('.model-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.model-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentModel = btn.dataset.variant;
+        if (isCompareMode) {
+          isCompareMode = false;
+          compareToggleBtn.classList.remove('active');
+        }
+        runRerank();
+      });
+    });
+
+    // Compare Mode Toggle
+    compareToggleBtn.addEventListener('click', () => {
+      isCompareMode = !isCompareMode;
+      compareToggleBtn.classList.toggle('active', isCompareMode);
+      runRerank();
+    });
+
+    rerankBtn.addEventListener('click', () => runRerank());
+
+    // Execute rerank
+    async function runRerank() {
+      if (currentProducts.length === 0) return;
+
+      metricCount.textContent = currentProducts.length;
+
+      if (isCompareMode) {
+        // Run comparison
+        try {
+          const res = await fetch('/api/compare', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              query: currentQuery,
+              products: currentProducts
+            })
+          });
+          const data = await res.json();
+          renderComparisonView(data);
+        } catch (err) {
+          console.error("Comparison request failed:", err);
+        }
+      } else {
+        // Run single model
+        try {
+          const res = await fetch('/api/rerank', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              query: currentQuery,
+              products: currentProducts,
+              model_variant: currentModel
+            })
+          });
+          const data = await res.json();
+          renderSingleModelView(data);
+        } catch (err) {
+          console.error("Rerank request failed:", err);
+        }
+      }
+    }
+
+    // Render Single Model View
+    function renderSingleModelView(data) {
+      metricNdcg.textContent = data.ndcg_10.toFixed(4);
+      metricNdcgSub.textContent = `Model: ${data.model_variant}`;
+      metricLatency.textContent = `${data.latency_ms} ms`;
+
+      let html = `<div class="results-section">`;
+      data.ranked_products.forEach(p => {
+        const rankClass = p.rank === 1 ? 'top-1' : p.rank === 2 ? 'top-2' : p.rank === 3 ? 'top-3' : '';
+        const chipClass = p.esci_label === 'E' ? 'chip-exact' :
+                          p.esci_label === 'S' ? 'chip-substitute' :
+                          p.esci_label === 'C' ? 'chip-complement' : 'chip-irrelevant';
+        const labelName = p.esci_label === 'E' ? 'Exact' :
+                          p.esci_label === 'S' ? 'Substitute' :
+                          p.esci_label === 'C' ? 'Complement' : 'Irrelevant';
+
+        const imgBadge = p.has_image 
+          ? `<span class="feature-pill" style="color:#38bdf8;">🖼️ CLIP Sim: ${(p.clip_similarity * 100).toFixed(1)}%</span>`
+          : `<span class="feature-pill" style="color:#94a3b8;">⚠️ No Image</span>`;
+
+        html += `
+          <div class="product-card">
+            <div class="rank-badge ${rankClass}">#${p.rank}</div>
+            <div class="product-info">
+              <div class="product-title-text" title="${p.title}">${p.title}</div>
+              <div class="product-meta-row">
+                <span class="esci-chip ${chipClass}">${labelName} (Gain ${p.gain})</span>
+                <span class="feature-pill">BM25: ${p.bm25_score}</span>
+                <span class="feature-pill">Overlap: ${(p.token_overlap * 100).toFixed(0)}%</span>
+                <span class="feature-pill">Len: ${p.title_length}</span>
+                ${imgBadge}
+              </div>
+            </div>
+            <div class="score-badge">Score ${p.score}</div>
+          </div>
+        `;
+      });
+      html += `</div>`;
+      resultsContainer.innerHTML = html;
+    }
+
+    // Render Side-by-Side Comparison
+    function renderComparisonView(data) {
+      const deltaSign = data.delta_ndcg > 0 ? `+${data.delta_ndcg.toFixed(4)}` : data.delta_ndcg.toFixed(4);
+      const deltaColor = data.delta_ndcg > 0 ? '#34d399' : data.delta_ndcg < 0 ? '#fb7185' : '#cbd5e1';
+
+      metricNdcg.textContent = `${data.text_plus_image_ndcg.toFixed(4)}`;
+      metricNdcgSub.innerHTML = `Δ NDCG: <b style="color:${deltaColor}">${deltaSign}</b> (vs Text-Only)`;
+      metricLatency.textContent = `${data.latency_ms} ms`;
+
+      let html = `
+        <div class="comparison-grid">
+          <!-- Column 1: Text Only -->
+          <div>
+            <div class="column-header">
+              <span class="column-title">📝 Text-Only LambdaRank</span>
+              <span class="tag-badge" style="color:#94a3b8;">NDCG@10: <b>${data.text_only_ndcg.toFixed(4)}</b></span>
+            </div>
+            <div class="results-section">
+      `;
+
+      data.text_only.forEach(p => {
+        const rankClass = p.rank === 1 ? 'top-1' : p.rank === 2 ? 'top-2' : p.rank === 3 ? 'top-3' : '';
+        const chipClass = p.esci_label === 'E' ? 'chip-exact' :
+                          p.esci_label === 'S' ? 'chip-substitute' :
+                          p.esci_label === 'C' ? 'chip-complement' : 'chip-irrelevant';
+        html += `
+          <div class="product-card">
+            <div class="rank-badge ${rankClass}">#${p.rank}</div>
+            <div class="product-info">
+              <div class="product-title-text" title="${p.title}">${p.title}</div>
+              <div class="product-meta-row">
+                <span class="esci-chip ${chipClass}">${p.esci_label}</span>
+                <span class="feature-pill">BM25: ${p.bm25_score}</span>
+                <span class="feature-pill">Overlap: ${(p.token_overlap * 100).toFixed(0)}%</span>
+              </div>
+            </div>
+            <div class="score-badge">${p.score}</div>
+          </div>
+        `;
+      });
+
+      html += `
+            </div>
+          </div>
+
+          <!-- Column 2: Text + Image (Multimodal) -->
+          <div>
+            <div class="column-header" style="border-color:rgba(139, 92, 246, 0.4);">
+              <span class="column-title" style="color:#c4b5fd;">✨ Text + Image Multimodal</span>
+              <span class="tag-badge" style="color:#a78bfa;border-color:rgba(139,92,246,0.3);">NDCG@10: <b>${data.text_plus_image_ndcg.toFixed(4)}</b></span>
+            </div>
+            <div class="results-section">
+      `;
+
+      data.text_plus_image.forEach(p => {
+        const rankClass = p.rank === 1 ? 'top-1' : p.rank === 2 ? 'top-2' : p.rank === 3 ? 'top-3' : '';
+        const chipClass = p.esci_label === 'E' ? 'chip-exact' :
+                          p.esci_label === 'S' ? 'chip-substitute' :
+                          p.esci_label === 'C' ? 'chip-complement' : 'chip-irrelevant';
+
+        // Delta indicator
+        let deltaHtml = `<span class="delta-badge delta-flat">• 0</span>`;
+        if (p.rank_delta > 0) {
+          deltaHtml = `<span class="delta-badge delta-up">▲ +${p.rank_delta}</span>`;
+        } else if (p.rank_delta < 0) {
+          deltaHtml = `<span class="delta-badge delta-down">▼ ${p.rank_delta}</span>`;
+        }
+
+        const imgBadge = p.has_image 
+          ? `<span class="feature-pill" style="color:#38bdf8;">Sim: ${(p.clip_similarity * 100).toFixed(0)}%</span>`
+          : `<span class="feature-pill" style="color:#94a3b8;">No Img</span>`;
+
+        html += `
+          <div class="product-card">
+            <div class="rank-badge ${rankClass}">#${p.rank}</div>
+            <div class="product-info">
+              <div class="product-title-text" title="${p.title}">${p.title}</div>
+              <div class="product-meta-row">
+                ${deltaHtml}
+                <span class="esci-chip ${chipClass}">${p.esci_label}</span>
+                ${imgBadge}
+              </div>
+            </div>
+            <div class="score-badge">${p.score}</div>
+          </div>
+        `;
+      });
+
+      html += `
+            </div>
+          </div>
+        </div>
+      `;
+
+      resultsContainer.innerHTML = html;
+    }
+
+    // Modal handlers
+    openAddModalBtn.addEventListener('click', () => {
+      addModal.style.display = 'flex';
+    });
+
+    closeAddModalBtn.addEventListener('click', () => {
+      addModal.style.display = 'none';
+    });
+
+    saveNewProductBtn.addEventListener('click', () => {
+      const title = document.getElementById('newTitle').value.trim();
+      if (!title) {
+        alert("Please enter a product title.");
+        return;
+      }
+      const esci_label = document.getElementById('newLabel').value;
+      const has_image = parseInt(document.getElementById('newHasImage').value);
+      const clip_similarity = has_image ? parseFloat(document.getElementById('newClipSim').value) : null;
+
+      currentProducts.unshift({
+        product_id: `custom_${Date.now()}`,
+        title: title,
+        esci_label: esci_label,
+        has_image: has_image,
+        clip_similarity: clip_similarity
+      });
+
+      addModal.style.display = 'none';
+      document.getElementById('newTitle').value = '';
+      runRerank();
+    });
+  </script>
+</body>
+</html>
