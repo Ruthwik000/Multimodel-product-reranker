@@ -1,0 +1,75 @@
+# Default configuration for multimodal-product-reranker
+seed: 42
+locale: "us"
+use_reduced_version: true
+n_train_queries: 3000
+n_test_queries: 1000
+val_fraction: 0.15
+ndcg_k: 10
+n_seeds: 3
+
+gains:
+  E: 1.0
+  S: 0.1
+  C: 0.01
+  I: 0.0
+
+paths:
+  raw: "data/raw"
+  interim: "data/interim"
+  processed: "data/processed"
+  reports: "reports"
+  figures: "reports/figures"
+  configs: "configs"
+
+lightgbm:
+  objective: "lambdarank"
+  metric: "ndcg"
+  n_estimators: 200
+  num_leaves: 31
+  learning_rate: 0.1
+  min_child_samples: 20
+  eval_at: [10]
+  early_stopping_rounds: 30
+  verbose: -1
+
+visual_lexicon:
+  words:
+    - red
+    - blue
+    - green
+    - black
+    - white
+    - pink
+    - purple
+    - yellow
+    - orange
+    - brown
+    - gold
+    - silver
+    - grey
+    - gray
+    - striped
+    - floral
+    - plaid
+    - polka
+    - checkered
+    - printed
+    - leather
+    - cotton
+    - silk
+    - wool
+    - denim
+    - velvet
+    - linen
+    - satin
+    - suede
+    - lace
+    - mesh
+    - knit
+    - vintage
+    - modern
+    - retro
+    - minimalist
+    - boho
+    - elegant
