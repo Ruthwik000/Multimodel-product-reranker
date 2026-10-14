@@ -24,8 +24,8 @@
 | **9** | **Training & Ablation Pipeline** | ✅ Completed | `e480f88 feat(experiments): add training and ablation pipeline` | `ablation.py` & `scripts/train.py` running 5 variants across 3 seeds (`random`, `bm25_only`, `text_only`, `image_only`, `text_plus_image`), logging to `reports/` and `docs/experiment_log.md`. |
 | **10** | **Statistical Significance** | ✅ Completed | `983b62f feat(eval): add paired bootstrap significance test` | `stats.py` & `scripts/evaluate.py` calculating paired bootstrap 95% CI (10,000 resamples) for NDCG delta (`text_plus_image` vs `text_only`), `test_stats.py`. |
 | **11** | **Error Analysis** | ✅ Completed | `efcea29 feat(analysis): add visual-vs-nonvisual segmentation and error analysis` | `analysis.py` & `scripts/error_analysis.py` for visual query classification, top 15 improved/degraded queries, and feature importance chart. |
-| **12** | **Documentation** | ⏳ In Progress | *Pending Commit* | Comprehensive `README.md`, `docs/architecture.md`, `docs/interview_notes.md`. Final numbers from reports/ to be inserted upon full run. |
-| **13** | **Final QA & Release** | ⏳ In Progress | *Pending Commit* | Clean run of `make lint test all`, verify untracked data files with `git ls-files`, tag `v0.1.0`. |
+| **12** | **Documentation** | ✅ Completed | `96120ea docs: add README, architecture and interview notes` | Comprehensive `README.md`, `docs/architecture.md`, `docs/interview_notes.md` with interview Q&A. |
+| **13** | **Final QA & Release** | ✅ Completed | `chore: final QA and release v0.1.0` | Passed ruff lint/format, 51/51 pytest, verified 0 data files tracked in git, tagged v0.1.0. |
 
 ---
 
