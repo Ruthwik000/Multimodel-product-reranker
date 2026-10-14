@@ -1,0 +1,12 @@
+pandas
+numpy
+pyarrow
+scikit-learn
+lightgbm
+rank-bm25
+pyyaml
+huggingface_hub
+matplotlib
+tqdm
+pytest
+ruff
