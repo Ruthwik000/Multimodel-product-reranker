@@ -49,3 +49,19 @@ Text search often fails when users type ambiguous or visually descriptive querie
   3. *Stage 3 (Cross-Attention or Heavy Transformer, Optional)*: Late-stage reranking on top 20 candidates.
 - **Embedding Cache Invalidation**: Catalog product embeddings are generated asynchronously during catalog ingestion/updates, meaning zero online image encoding overhead.
 - **Fallback Resilience**: When a product image is unavailable or inference times out, the LambdaRank tree handles `NaN` image features natively, falling back gracefully to text BM25 and token overlap signals.
+
+---
+
+## 4. Empirical Results & Key Findings (from `reports/results.md`)
+
+| Model Variant | Test NDCG@10 (Mean ± Std) | Key Features |
+|---|:---:|---|
+| **`text_only`** | **0.6804 ± 0.0000** | BM25 + query-title token overlap + title length |
+| **`text_plus_image`** | **0.6798 ± 0.0000** | Text features + SQID CLIP cosine similarity + `has_image` |
+| **`bm25_only`** | **0.6735 ± 0.0000** | BM25 lexical score baseline |
+| **`image_only`** | **0.5996 ± 0.0000** | CLIP image similarity + `has_image` |
+| **`random`** | **0.5833 ± 0.0041** | Uniform random score baseline |
+
+### Key Takeaway for Interviews
+- **Overall Delta:** $\Delta \text{NDCG@10} = -0.0006$ with a 95% bootstrap confidence interval of $[-0.0062, +0.0050]$ ($p = 0.4103$).
+- **The Core ML Insight:** Adding generic precomputed CLIP image embeddings across an entire e-commerce catalog does **not** provide a universal ranking lift ($p > 0.05$). The high missing image rate (60.86%) and the presence of purely functional/spec-based products (e.g., cables, batteries) mean visual similarity introduces noise unless conditioned on visual intent. However, on visually driven search queries (e.g. *pool cover*, *silk bodysuit*, *disney long sleeve shirts*), visual features deliver dramatic gains up to **+0.4057 NDCG lift**.

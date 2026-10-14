@@ -33,11 +33,12 @@ env/
 .DS_Store
 Thumbs.db
 
-# Models
+# Models & binary arrays
 *.pkl
 *.joblib
 *.model
 *.txt.bin
+*.npy
 
 # Caches
 .cache/

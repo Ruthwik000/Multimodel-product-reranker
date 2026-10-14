@@ -62,13 +62,15 @@ def load_sqid_query_features(cfg: Config) -> pd.DataFrame:
 
 def filter_locale(df: pd.DataFrame, locale: str) -> pd.DataFrame:
     """Filter a DataFrame to a specific locale."""
-    col = "query_locale" if "query_locale" in df.columns else "locale"
-    if col not in df.columns:
-        logger.warning("No locale column found, returning all rows")
-        return df
-    filtered = df[df[col] == locale].copy()
-    logger.info("Filtered to locale '%s': %d -> %d rows", locale, len(df), len(filtered))
-    return filtered
+    for col in ["product_locale", "query_locale", "locale"]:
+        if col in df.columns:
+            filtered = df[df[col] == locale].copy()
+            logger.info(
+                "Filtered on '%s' to '%s': %d -> %d rows", col, locale, len(df), len(filtered)
+            )
+            return filtered
+    logger.warning("No locale column found, returning all rows")
+    return df
 
 
 def filter_reduced(df: pd.DataFrame) -> pd.DataFrame:

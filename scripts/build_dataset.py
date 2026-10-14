@@ -35,20 +35,20 @@ def main() -> None:
     if cfg.use_reduced_version:
         examples = filter_reduced(examples)
 
-    # Merge product titles into examples
+    # Sample queries for train and test first
+    total_queries = cfg.n_train_queries + cfg.n_test_queries
+    sampled = sample_queries(examples, total_queries, cfg.seed)
+
+    # Merge product titles into sampled examples
     product_cols = ["product_id"]
     if "product_title" in products.columns:
         product_cols.append("product_title")
-    if "product_title" not in examples.columns:
-        examples = examples.merge(
-            products[product_cols].drop_duplicates(),
+    if "product_title" not in sampled.columns:
+        sampled = sampled.merge(
+            products[product_cols].drop_duplicates(subset=["product_id"]),
             on="product_id",
             how="left",
         )
-
-    # Sample queries for train and test
-    total_queries = cfg.n_train_queries + cfg.n_test_queries
-    sampled = sample_queries(examples, total_queries, cfg.seed)
 
     # Join image embeddings
     joined = join_image_embeddings(

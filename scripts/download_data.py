@@ -52,6 +52,24 @@ def _copy_esci_files(esci_dir: Path, raw_dir: Path) -> None:
     patterns = ["**/*examples*.parquet", "**/*products*.parquet"]
     for pattern in patterns:
         for src in esci_dir.glob(pattern):
+            if src.stat().st_size < 1000:
+                logger.info(
+                    "Found LFS pointer for %s (size %d bytes), pulling real file...",
+                    src.name,
+                    src.stat().st_size,
+                )
+                try:
+                    subprocess.run(
+                        ["git", "-C", str(esci_dir), "lfs", "pull", "--include", src.name],
+                        check=True,
+                        capture_output=True,
+                        text=True,
+                    )
+                except Exception as e:
+                    logger.warning("git lfs pull failed: %s", e)
+
+    for pattern in patterns:
+        for src in esci_dir.glob(pattern):
             dest = raw_dir / src.name
             if not dest.exists():
                 shutil.copy2(src, dest)
@@ -63,19 +81,23 @@ def download_sqid(raw_dir: Path) -> None:
     """Download SQID image features from Hugging Face."""
     logger.info("Listing files in SQID repo: %s", SQID_HF_REPO)
     try:
-        repo_files = list_repo_files(SQID_HF_REPO)
+        repo_files = list_repo_files(SQID_HF_REPO, repo_type="dataset")
         logger.info("SQID repo contains %d files: %s", len(repo_files), repo_files)
     except Exception as e:
         logger.warning("Could not list SQID repo files: %s", e)
         repo_files = []
 
-    # Download parquet files
-    parquet_files = [f for f in repo_files if f.endswith(".parquet")]
+    # Download parquet files: product and query CLIP embeddings
+    parquet_files = [
+        f
+        for f in repo_files
+        if f.endswith(".parquet") and ("product_features" in f or "query_features" in f)
+    ]
     if not parquet_files:
-        logger.warning("No parquet files found in SQID repo, trying known names")
+        logger.warning("No parquet files found in SQID repo, using known names")
         parquet_files = [
-            "product_image_features.parquet",
-            "query_image_features.parquet",
+            "data/product_features.parquet",
+            "data/query_features.parquet",
         ]
 
     for filename in parquet_files:

@@ -90,4 +90,4 @@ def _assert_no_overlap(
     assert train_q.isdisjoint(val_q), f"Train-Val overlap: {train_q & val_q}"
     assert train_q.isdisjoint(test_q), f"Train-Test overlap: {train_q & test_q}"
     assert val_q.isdisjoint(test_q), f"Val-Test overlap: {val_q & test_q}"
-    logger.info("✓ No query overlap between splits")
+    logger.info("[OK] No query overlap between splits")

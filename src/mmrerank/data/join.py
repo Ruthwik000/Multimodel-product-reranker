@@ -72,6 +72,15 @@ def compute_clip_similarity(row: pd.Series) -> float:
 
 def _find_embedding_cols(df: pd.DataFrame, prefix: str) -> list[str]:
     """Find embedding columns — either a single array column or numbered columns."""
+    if prefix == "product":
+        for preferred in ["clip_image_features", "image_embedding", "product_embedding"]:
+            if preferred in df.columns:
+                return [preferred]
+    elif prefix == "query":
+        for preferred in ["clip_text_features", "query_embedding", "text_embedding"]:
+            if preferred in df.columns:
+                return [preferred]
+
     # Single column with list/array values
     for col in df.columns:
         if "embedding" in col.lower() or "feature" in col.lower():
@@ -105,21 +114,12 @@ def _build_embedding_lookup(
         logger.warning("No embedding columns for %s, returning empty lookup", label)
         return {}
 
-    lookup: dict = {}
-    if len(emb_cols) == 1 and df[emb_cols[0]].dtype == object:
-        # Single column with list values
-        for _, row in df.iterrows():
-            key = row[id_col]
-            val = row[emb_cols[0]]
-            if val is not None:
-                lookup[key] = list(val) if isinstance(val, np.ndarray) else val
+    if len(emb_cols) == 1:
+        # Fast vectorized dictionary creation without iterrows
+        lookup = dict(zip(df[id_col], df[emb_cols[0]]))
     else:
         # Multiple numeric columns
-        for _, row in df.iterrows():
-            key = row[id_col]
-            vec = [float(row[c]) for c in emb_cols]
-            if not all(np.isnan(v) for v in vec):
-                lookup[key] = vec
+        lookup = dict(zip(df[id_col], df[emb_cols].to_numpy().tolist()))
 
     logger.info("Built %s embedding lookup: %d entries", label, len(lookup))
     return lookup

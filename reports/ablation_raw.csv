@@ -1,0 +1,16 @@
+variant,seed,ndcg_mean,ndcg_std,n_queries,feature_names
+random,42,0.5789672145149789,0.2210169608741818,1206,[]
+bm25_only,42,0.6735330960933498,0.20331177774980702,1206,[]
+random,43,0.5837208354759816,0.2144529370541494,1206,[]
+bm25_only,43,0.6735330960933498,0.20331177774980702,1206,[]
+random,44,0.587084143588369,0.21220984443581573,1206,[]
+bm25_only,44,0.6735330960933498,0.20331177774980702,1206,[]
+text_only,42,0.6803896047210272,0.1952903926023514,1206,"['bm25_score', 'token_overlap', 'title_length']"
+text_only,43,0.6803896047210272,0.1952903926023514,1206,"['bm25_score', 'token_overlap', 'title_length']"
+text_only,44,0.6803896047210272,0.1952903926023514,1206,"['bm25_score', 'token_overlap', 'title_length']"
+image_only,42,0.5996003466467411,0.21604230751039322,1206,"['clip_similarity', 'has_image']"
+image_only,43,0.5996003466467411,0.21604230751039322,1206,"['clip_similarity', 'has_image']"
+image_only,44,0.5996003466467411,0.21604230751039322,1206,"['clip_similarity', 'has_image']"
+text_plus_image,42,0.6797669255892795,0.2049483208748035,1206,"['bm25_score', 'token_overlap', 'title_length', 'clip_similarity', 'has_image']"
+text_plus_image,43,0.6797669255892795,0.2049483208748035,1206,"['bm25_score', 'token_overlap', 'title_length', 'clip_similarity', 'has_image']"
+text_plus_image,44,0.6797669255892795,0.2049483208748035,1206,"['bm25_score', 'token_overlap', 'title_length', 'clip_similarity', 'has_image']"

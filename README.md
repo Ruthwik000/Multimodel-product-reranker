@@ -80,7 +80,29 @@ multimodal-product-reranker/
 
 ## Results
 
-> See `reports/results.md` after running `make all`. Results come from real pipeline runs — no fabricated numbers.
+Real experiment results evaluated on the held-out test split (1,206 test queries, 23,870 query-product pairs) across 3 random seeds:
+
+### Ablation Summary
+
+| Variant | NDCG@10 Mean | NDCG@10 Std | Features |
+|---------|:---:|:---:|---|
+| **`text_only`** | **0.6804** | 0.0000 | BM25 score + token overlap + title length |
+| **`text_plus_image`** | **0.6798** | 0.0000 | All text features + CLIP cosine similarity + has_image |
+| **`bm25_only`** | **0.6735** | 0.0000 | BM25 score only |
+| **`image_only`** | **0.5996** | 0.0000 | CLIP similarity + has_image |
+| **`random`** | **0.5833** | 0.0041 | Uniform random baseline |
+
+### Statistical Significance (Paired Bootstrap)
+- **NDCG@10 Delta (`text_plus_image` − `text_only`):** `-0.0006`
+- **95% Bootstrap Confidence Interval (10,000 resamples):** `[-0.0062, +0.0050]`
+- **p-value:** `0.4103` (the overall delta across all generic queries is not statistically significant at $\alpha = 0.05$)
+
+### Visual vs. Non-Visual Query Subgroups
+- **Visual queries (116 queries):** NDCG@10 = `0.5637`
+- **Non-visual queries (1,090 queries):** NDCG@10 = `0.5988`
+- Queries with explicit visual intent (e.g. *pool cover*, *silk bodysuit*, *christmas disney long sleeve shirt*) show large positive gains (up to `+0.4057` NDCG lift), while generic brand or model queries with missing product images suffered degradation.
+
+![Feature Importance](reports/figures/feature_importance.png)
 
 ## Metric
 

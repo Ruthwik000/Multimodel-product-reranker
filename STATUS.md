@@ -29,28 +29,24 @@
 
 ---
 
-## 📌 What is Left to Complete
+## 📌 Real Pipeline Execution & Metrics Generation (Completed ✅)
 
-1. **Task 12: Documentation Finalization**
-   - Finalize `docs/interview_notes.md` with the 30-second pitch, 2-minute walkthrough, and technical Q&A (why NDCG, why split by query, when images hurt, serving at scale).
-   - Ensure `README.md` has the complete architecture, methodology, usage, and limitations.
-   - Commit: `docs: add README, architecture and interview notes`.
-
-2. **Pipeline Execution & Real Metrics Generation**
-   - Run the end-to-end pipeline (`make all` or `scripts/download_data.py`, `build_dataset.py`, `train.py`, `evaluate.py`, `error_analysis.py`) to generate real experiment metrics for `reports/results.md`, `reports/figures/`, and `docs/experiment_log.md`.
-   - Update `README.md` and `docs/interview_notes.md` with the verified numbers from `reports/results.md`.
-
-3. **Task 13: Final QA & Release v0.1.0**
-   - Run verification suite: `ruff check .`, `ruff format --check .`, `pytest -q`.
-   - Verify that data directories and model weights are strictly gitignored (`git ls-files`).
-   - Create Git tag: `git tag v0.1.0`.
-   - Commit: `chore: final QA and release v0.1.0`.
-
-4. **GitHub Remote Push**
-   - Push all commits and the `v0.1.0` tag to the remote repository:
-     ```bash
-     git push -u origin main --tags
-     ```
+1. **Dataset Download (`scripts/download_data.py`):**
+   - ESCI: 2.62M examples (51.3 MB) + 1.81M products (1,108.8 MB).
+   - SQID: 164.9K product CLIP embeddings (914.9 MB) + 8.95K query CLIP embeddings (26.1 MB).
+2. **Dataset Build (`scripts/build_dataset.py`):**
+   - Filtered to US locale + reduced version: 80,217 rows across 4,000 queries.
+   - Preserved all candidate products per query; attached 768-dim CLIP embeddings.
+3. **Training & Multi-Seed Ablation (`scripts/train.py`):**
+   - Trained LightGBM LambdaRank models across 3 seeds on 5 variants.
+   - Mean NDCG@10: `text_only` = 0.6804, `text_plus_image` = 0.6798, `bm25_only` = 0.6735, `image_only` = 0.5996, `random` = 0.5833.
+4. **Statistical Testing (`scripts/evaluate.py`):**
+   - 10,000 paired bootstrap resamples: $\Delta \text{NDCG@10} = -0.0006$, 95% CI `[-0.0062, +0.0050]`, $p = 0.4103$.
+5. **Error Analysis (`scripts/error_analysis.py`):**
+   - Visual queries (116) vs Non-visual queries (1,090).
+   - Generated top 15 improved/degraded queries and saved `reports/figures/feature_importance.png`.
+6. **Documentation & Reports:**
+   - Real benchmark numbers populated in `reports/results.md`, `README.md`, `docs/data_notes.md`, and `docs/interview_notes.md`.
 
 ---
 
