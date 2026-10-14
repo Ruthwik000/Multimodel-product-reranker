@@ -34,10 +34,13 @@ def load_esci_products(cfg: Config) -> pd.DataFrame:
 
 def load_sqid_product_features(cfg: Config) -> pd.DataFrame:
     """Load SQID product image features (CLIP embeddings)."""
-    path = cfg.paths.raw / "product_image_features.parquet"
-    if not path.exists():
-        # Try alternative name
-        path = cfg.paths.raw / "sqid_product_features.parquet"
+    candidates = [
+        cfg.paths.raw / "product_features.parquet",
+        cfg.paths.raw / "product_image_features.parquet",
+        cfg.paths.raw / "sqid_product_features.parquet",
+        cfg.paths.raw / "data" / "product_features.parquet",
+    ]
+    path = next((p for p in candidates if p.exists()), candidates[0])
     df = pd.read_parquet(path)
     logger.info("Loaded SQID product features: %d rows, columns: %s", len(df), list(df.columns))
     return df
@@ -45,9 +48,13 @@ def load_sqid_product_features(cfg: Config) -> pd.DataFrame:
 
 def load_sqid_query_features(cfg: Config) -> pd.DataFrame:
     """Load SQID query features (CLIP query embeddings)."""
-    path = cfg.paths.raw / "query_image_features.parquet"
-    if not path.exists():
-        path = cfg.paths.raw / "sqid_query_features.parquet"
+    candidates = [
+        cfg.paths.raw / "query_features.parquet",
+        cfg.paths.raw / "query_image_features.parquet",
+        cfg.paths.raw / "sqid_query_features.parquet",
+        cfg.paths.raw / "data" / "query_features.parquet",
+    ]
+    path = next((p for p in candidates if p.exists()), candidates[0])
     df = pd.read_parquet(path)
     logger.info("Loaded SQID query features: %d rows, columns: %s", len(df), list(df.columns))
     return df

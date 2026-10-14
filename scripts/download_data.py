@@ -80,7 +80,8 @@ def download_sqid(raw_dir: Path) -> None:
 
     for filename in parquet_files:
         dest = raw_dir / Path(filename).name
-        if dest.exists():
+        nested = raw_dir / filename
+        if dest.exists() or nested.exists():
             logger.info("SQID file already present: %s", dest.name)
             continue
         logger.info("Downloading SQID file: %s", filename)
@@ -91,8 +92,13 @@ def download_sqid(raw_dir: Path) -> None:
                 local_dir=str(raw_dir),
                 repo_type="dataset",
             )
-            size_mb = Path(downloaded).stat().st_size / (1024 * 1024)
+            downloaded_path = Path(downloaded)
+            size_mb = downloaded_path.stat().st_size / (1024 * 1024)
             logger.info("Downloaded %s (%.1f MB)", filename, size_mb)
+            if downloaded_path.resolve() != dest.resolve() and not dest.exists():
+                import shutil
+
+                shutil.copy2(downloaded_path, dest)
         except Exception as e:
             logger.error("Failed to download %s: %s", filename, e)
 

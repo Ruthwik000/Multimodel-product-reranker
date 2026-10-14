@@ -47,3 +47,6 @@ Thumbs.db
 # Secrets
 .env
 *.key
+
+# Local prompt
+prompt.txt
